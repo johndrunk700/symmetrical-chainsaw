@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Class Link</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", sans-serif; background: #f5f5f5; color: #333; }
+  .page { display: none; height: 100vh; flex-direction: column; }
+  .page.active { display: flex; }
+  .header { background: #fff; padding: 15px 20px; display: flex; align-items: center; border-bottom: 1px solid #eee; position: relative; }
+  .header .back { font-size: 26px; cursor: pointer; margin-right: 10px; }
+  .header .title { flex: 1; text-align: center; font-size: 18px; font-weight: 600; }
+  .tabs { display: flex; border-top: 1px solid #eee; background: #fff; }
+  .tab { flex: 1; text-align: center; padding: 12px 0; font-size: 14px; color: #999; cursor: pointer; }
+  .tab.active { color: #07c160; font-weight: 600; border-bottom: 2px solid #07c160; }
+  .content { flex: 1; overflow-y: auto; }
+  .list-item { display: flex; align-items: center; padding: 15px 20px; background: #fff; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+  .list-item:active { background: #f5f5f5; }
+  .avatar { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; background: #ddd; flex-shrink: 0; }
+  .list-info { margin-left: 15px; flex: 1; min-width: 0; }
+  .list-name { font-size: 16px; font-weight: 500; }
+  .list-desc { font-size: 13px; color: #999; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .section-title { padding: 12px 20px 6px; font-size: 13px; color: #999; }
+  .profile-section { text-align: center; padding: 30px 20px; background: #fff; }
+  .profile-section .avatar { width: 86px; height: 86px; cursor: pointer; }
+  .profile-section .name { font-size: 21px; font-weight: 700; margin-top: 10px; }
+  .profile-section .uuid { font-size: 12px; color: #999; margin-top: 6px; word-break: break-all; }
+  .menu-item { display: flex; justify-content: space-between; padding: 16px 20px; background: #fff; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+  .disclaimer { padding: 20px; font-size: 12px; color: #bbb; text-align: center; }
+  .chat-header { position: sticky; top: 0; z-index: 10; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 15px; }
+  .chat-msg { display: flex; margin-bottom: 12px; align-items: flex-end; }
+  .chat-msg.self { flex-direction: row-reverse; }
+  .chat-msg .avatar { width: 44px; height: 44px; }
+  .chat-msg .bubble { max-width: 74%; padding: 10px 14px; border-radius: 12px; background: #fff; margin: 0 10px; font-size: 15px; line-height: 1.5; word-break: break-word; }
+  .chat-msg.self .bubble { background: #95ec69; }
+  /* 图片消息：无气泡背景，直接显示 */
+  .chat-msg .image-wrapper { max-width: 260px; margin: 0 10px; }
+  .chat-msg .image-wrapper img { width: 100%; border-radius: 10px; display: block; cursor: pointer; }
+  .chat-msg .image-wrapper video { width: 100%; border-radius: 10px; background: #000; }
+  .chat-msg .image-wrapper audio { width: 180px; }
+  .input-area { display: flex; align-items: flex-end; padding: 8px 12px; background: #f8f8f8; border-top: 1px solid #eee; }
+  .input-area .icon-btn { background: none; border: none; font-size: 24px; padding: 6px; cursor: pointer; }
+  .input-area .text-input { flex: 1; padding: 9px 14px; border: 1px solid #ddd; border-radius: 20px; font-size: 16px; outline: none; background: #fff; min-height: 38px; max-height: 96px; resize: none; line-height: 1.4; margin: 0 6px; }
+  .input-area .send-btn { padding: 8px 18px; background: #07c160; color: #fff; border: none; border-radius: 20px; font-size: 15px; cursor: pointer; }
+  .input-area .send-btn:disabled { opacity: .4; }
+  .more-panel { display: none; background: #fff; border-top: 1px solid #eee; padding: 14px; grid-template-columns: repeat(4,1fr); gap: 10px; }
+  .more-panel .item { text-align: center; cursor: pointer; }
+  .more-panel .item .icon { font-size: 28px; margin-bottom: 2px; }
+  .more-panel .item .label { font-size: 12px; color: #999; }
+  .float-tip { position: fixed; top: 66px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.78); color: #fff; padding: 10px 22px; border-radius: 20px; font-size: 14px; z-index: 399; opacity: 0; transition: opacity .3s; pointer-events: none; max-width: 88%; text-align: center; }
+  .preview-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.94); display: none; align-items: center; justify-content: center; z-index: 499; }
+  .preview-overlay img { max-width: 98%; max-height: 98%; border-radius: 6px; }
+  .preview-overlay .close { position: absolute; top: 20px; right: 25px; color: #fff; font-size: 34px; cursor: pointer; }
+  .recording-indicator { display: none; position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); background: #ff4444; color: #fff; padding: 8px 20px; border-radius: 30px; font-size: 14px; z-index: 599; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+</style>
+</head>
+<body>
+
+<div class="preview-overlay" id="preview-overlay" onclick="this.style.display='none'">
+  <span class="close">&times;</span>
+  <img id="preview-img" src="">
+</div>
+
+<div class="recording-indicator" id="recording-indicator">⏺ 录音中…</div>
+
+<!-- 登录页 -->
+<div id="login-page" class="page active" style="align-items:center; justify-content:center;">
+  <div style="background:#fff; padding:35px 25px; border-radius:16px; max-width:360px; width:90%; text-align:center;">
+    <h2 style="margin-bottom:8px;">班级聊天室</h2>
+    <p style="color:#999; font-size:14px; margin-bottom:20px;">输入昵称，加入 Class Link</p>
+    <input type="text" id="nickname-input" placeholder="你的昵称" maxlength="20" style="width:100%; padding:12px; border:1.5px solid #ddd; border-radius:10px; font-size:16px; outline:none; margin-bottom:18px;">
+    <button id="enter-btn" style="width:100%; padding:12px; background:#07c160; color:#fff; border:none; border-radius:10px; font-size:17px; font-weight:600; cursor:pointer;">进入聊天室</button>
+    <div id="err-msg" style="color:#f5222d; font-size:13px; margin-top:12px; display:none;"></div>
+  </div>
+</div>
+
+<!-- 主应用 -->
+<div id="main-app" class="page">
+  <div class="header">
+    <span class="back" id="header-back" style="display:none;">‹</span>
+    <span class="title" id="header-title">Class Link</span>
+  </div>
+  <div class="content" id="main-content"></div>
+  <div class="tabs" id="main-tabs">
+    <div class="tab active" data-i="0">💬 聊天</div>
+    <div class="tab" data-i="1">👥 通讯录</div>
+    <div class="tab" data-i="2">👤 我的</div>
+    <div class="tab" data-i="3">👨‍👩‍👧 群聊</div>
+  </div>
+</div>
+
+<!-- 聊天室页面 -->
+<div id="chat-page" class="page">
+  <div class="header chat-header">
+    <span class="back" onclick="closeChat()">‹</span>
+    <span class="title" id="chat-title">【自己】</span>
+  </div>
+  <div class="chat-messages" id="chat-messages"></div>
+  <div class="input-area">
+    <button class="icon-btn" id="btn-more">🔗</button>
+    <textarea class="text-input" id="text-input" rows="1" placeholder="输入消息..."></textarea>
+    <button class="icon-btn" id="btn-mic">🎤</button>
+    <button class="send-btn" id="btn-send" disabled>发送</button>
+  </div>
+  <div class="more-panel" id="more-panel">
+    <div class="item" data-type="image"><div class="icon">🖼️</div><div class="label">图片</div></div>
+    <div class="item" data-type="video"><div class="icon">🎬</div><div class="label">视频</div></div>
+    <div class="item" data-type="audio"><div class="icon">🎵</div><div class="label">音频</div></div>
+    <div class="item" data-type="file"><div class="icon">📎</div><div class="label">文件</div></div>
+  </div>
+</div>
+
+<div class="float-tip" id="float-tip"></div>
+<input type="file" id="file-image" accept="image/*" style="display:none">
+<input type="file" id="file-video" accept="video/*" style="display:none">
+<input type="file" id="file-audio" accept="audio/*" style="display:none">
+<input type="file" id="file-any" style="display:none">
+<input type="file" id="avatar-input" accept="image/*" style="display:none">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ===== 配置 =====
+const SUPABASE_URL = 'https://brldvhbttrldfpotjtnc.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_UdTPRO0MOGseeusecznA-w_oz1wFtzB';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+const SELF_CHAT = '__self__';
+let currentChatTarget = null;
+let subscribed = false;
+
+// ===== 辅助函数：确保桶存在且公开 =====
+async function ensureBucket(bucketName) {
+  try {
+    const { data: buckets } = await sb.storage.listBuckets();
+    if (!buckets.find(b => b.name === bucketName)) {
+      await sb.storage.createBucket(bucketName, { public: true });
+      console.log(`Bucket "${bucketName}" created`);
+    }
+  } catch(e) {
+    console.warn('ensureBucket:', e);
+  }
+}
+
+// ===== 登录 =====
+document.getElementById('enter-btn').addEventListener('click', handleLogin);
+document.getElementById('nickname-input').addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
+
+async function handleLogin() {
+  const name = document.getElementById('nickname-input').value.trim();
+  if(!name) return showError('请输入昵称');
+  const btn = document.getElementById('enter-btn');
+  btn.disabled = true;
+  btn.textContent = '进入中...';
+  try {
+    await Promise.all([
+      ensureBucket('avatars'),
+      ensureBucket('chat-images'),
+      ensureBucket('chat-media')
+    ]);
+
+    let { data: existing } = await sb.from('profiles').select('*').eq('nickname', name).maybeSingle();
+    if(existing) {
+      currentUser = existing;
+    } else {
+      const uuid = crypto.randomUUID();
+      const { data: newUser, error } = await sb.from('profiles').insert([{ uuid, nickname: name, avatar_url: null }]).select().single();
+      if(error) throw error;
+      currentUser = newUser;
+    }
+    localStorage.setItem('chat_user', JSON.stringify(currentUser));
+    document.getElementById('login-page').classList.remove('active');
+    document.getElementById('main-app').classList.add('active');
+    switchTab(0);
+  } catch(err) {
+    showError('进入失败：' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '进入聊天室';
+  }
+}
+
+const saved = localStorage.getItem('chat_user');
+if(saved) {
+  currentUser = JSON.parse(saved);
+  document.getElementById('login-page').classList.remove('active');
+  document.getElementById('main-app').classList.add('active');
+  switchTab(0);
+}
+
+// ===== Tab =====
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(+t.dataset.i)));
+function switchTab(i) {
+  document.querySelectorAll('.tab').forEach((t,k) => t.classList.toggle('active', k===i));
+  document.getElementById('header-back').style.display = i === 4 ? 'block' : 'none';
+  document.getElementById('header-back').onclick = i === 4 ? closeGroupCreate : null;
+  document.getElementById('header-title').textContent = ['聊天','通讯录','我的','群聊'][i] || '';
+  if(i === 4) { renderGroupCreate(); return; }
+  // 切换到非群聊列表页时，隐藏加号按钮
+  hideGroupFab();
+  closeChat();
+  const c = document.getElementById('main-content');
+  if(i===0) renderChatList(c);
+  else if(i===1) renderContacts(c);
+  else if(i===2) renderProfile(c);
+  else renderGroupList(c);
+}
+
+// ===== 通讯录 =====
+async function renderContacts(container) {
+  container.innerHTML = '<div class="section-title">加载中...</div>';
+  try {
+    const { data: profiles } = await sb.from('profiles').select('*');
+    let html = '<div class="section-title">常用</div>';
+    html += `<div class="list-item" onclick="openChat('${SELF_CHAT}')">
+      <div style="width:54px;height:54px;border-radius:50%;background:#e8f4ff;display:flex;align-items:center;justify-content:center;font-size:26px;">📝</div>
+      <div class="list-info"><div class="list-name">【自己】</div><div class="list-desc">给自己发消息</div></div>
+    </div>`;
+    html += '<div class="section-title">同学 (' + (profiles?.length||0) + ' 人)</div>';
+    (profiles||[]).forEach(p => {
+      if(p.uuid === currentUser.uuid) return;
+      html += `<div class="list-item" onclick="openChat('${p.uuid}')">
+        <img class="avatar" src="${p.avatar_url || 'https://api.dicebear.com/7.x/initials/svg?seed='+encodeURIComponent(p.nickname)}">
+        <div class="list-info"><div class="list-name">${p.nickname}</div><div class="list-desc">${p.uuid.slice(0,8)}...</div></div>
+      </div>`;
+    });
+    container.innerHTML = html;
+  } catch(e) { container.innerHTML = '<div class="section-title">加载失败</div>'; }
+}
+
+// ===== 聊天列表 =====
+async function renderChatList(container) {
+  container.innerHTML = '<div class="section-title">加载中...</div>';
+  try {
+    const { data: msgs } = await sb.from('messages').select('*').or(`sender_uuid.eq.${currentUser.uuid},receiver_uuid.eq.${currentUser.uuid}`).order('created_at', { ascending: false });
+    const groups = {};
+    (msgs||[]).forEach(m => {
+      const other = m.sender_uuid === currentUser.uuid ? m.receiver_uuid : m.sender_uuid;
+      if(!other) return;
+      if(!groups[other] || new Date(m.created_at) > new Date(groups[other].created_at)) groups[other] = m;
+    });
+    const { data: profiles } = await sb.from('profiles').select('*');
+    const map = {}; (profiles||[]).forEach(p => map[p.uuid] = p);
+
+    let html = '';
+    html += `<div class="list-item" onclick="openChat('${SELF_CHAT}')">
+      <div style="width:54px;height:54px;border-radius:50%;background:#e8f4ff;display:flex;align-items:center;justify-content:center;font-size:26px;">📝</div>
+      <div class="list-info"><div class="list-name">【自己】</div><div class="list-desc">给自己发消息</div></div>
+    </div>`;
+    Object.keys(groups).forEach(other => {
+      if(other === SELF_CHAT) return;
+      const m = groups[other];
+      const p = map[other];
+      const name = p ? p.nickname : '未知';
+      const desc = m.media_type === 'text' ? m.content : (m.media_type === 'image' ? '[图片]' : (m.media_type === 'video' ? '[视频]' : (m.media_type === 'audio' ? '[语音]' : '[文件]')));
+      html += `<div class="list-item" onclick="openChat('${other}')">
+        <img class="avatar" src="${p ? (p.avatar_url || 'https://api.dicebear.com/7.x/initials/svg?seed='+encodeURIComponent(name)) : ''}">
+        <div class="list-info"><div class="list-name">${name}</div><div class="list-desc">${desc}</div></div>
+      </div>`;
+    });
+    // 加载群聊会话
+    const userGroups = getGroups().filter(g => g.members.some(m => m.uuid === currentUser.uuid));
+    if (userGroups.length > 0) {
+      html += '<div class="section-title">群聊</div>';
+      userGroups.forEach(g => {
+        html += `<div class="list-item" onclick="openGroupChat('${g.id}')">
+          <div style="width:54px;height:54px;border-radius:50%;background:#d4f0e0;display:flex;align-items:center;justify-content:center;font-size:26px;">👥</div>
+          <div class="list-info"><div class="list-name">${g.name}</div><div class="list-desc">${g.members.length} 人群聊</div></div>
+        </div>`;
+      });
+    }
+    container.innerHTML = html || '<div class="section-title">暂无会话</div>';
+  } catch(e) { container.innerHTML = '<div class="section-title">加载失败</div>'; }
+}
+
+// ===== 我的页面 =====
+function renderProfile(container) {
+  container.innerHTML = `
+    <div class="profile-section">
+      <img class="avatar" src="${currentUser.avatar_url || 'https://api.dicebear.com/7.x/initials/svg?seed='+encodeURIComponent(currentUser.nickname)}" onclick="document.getElementById('avatar-input').click()">
+      <div class="name">${currentUser.nickname}</div>
+      <div class="uuid">UUID: ${currentUser.uuid}</div>
+    </div>
+    <div class="menu-item" onclick="editNickname()"><span>修改昵称</span><span style="color:#999;">›</span></div>
+    <div class="menu-item" onclick="logout()"><span>退出登录</span><span style="color:#ff3b30;">›</span></div>
+    <div class="disclaimer">免责声明：本聊天室仅供班级内部交流使用，请勿发布违规内容。</div>
+  `;
+  document.getElementById('avatar-input').addEventListener('change', uploadAvatar);
+}
+
+async function uploadAvatar(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  try {
+    await ensureBucket('avatars');
+    const ext = file.name.split('.').pop() || 'png';
+    const path = `${currentUser.uuid}/avatar_${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from('avatars').upload(path, file, { upsert: true });
+    if(upErr) throw upErr;
+    const { data: urlData } = sb.storage.from('avatars').getPublicUrl(path);
+    const finalUrl = encodeURI(urlData.publicUrl);
+    await sb.from('profiles').update({ avatar_url: finalUrl }).eq('uuid', currentUser.uuid);
+    currentUser.avatar_url = finalUrl;
+    localStorage.setItem('chat_user', JSON.stringify(currentUser));
+    showFloatTip('头像更新成功');
+    switchTab(2);
+  } catch(err) {
+    showFloatTip('上传失败：' + err.message);
+  }
+}
+
+function editNickname() {
+  const newName = prompt('输入新昵称：', currentUser.nickname);
+  if(newName && newName.trim() && newName.trim() !== currentUser.nickname) {
+    currentUser.nickname = newName.trim();
+    localStorage.setItem('chat_user', JSON.stringify(currentUser));
+    switchTab(2);
+    showFloatTip('昵称已更新（仅本地）');
+  }
+}
+
+function logout() { localStorage.removeItem('chat_user'); location.reload(); }
+
+// ===== 打开聊天 =====
+function openChat(target) {
+  currentChatTarget = target;
+  document.getElementById('main-app').classList.remove('active');
+  document.getElementById('chat-page').classList.add('active');
+  document.getElementById('chat-title').innerText = target === SELF_CHAT ? '【自己】' : '聊天';
+  document.getElementById('chat-messages').innerHTML = '';
+  loadMessages();
+  subscribeMessages();
+}
+
+function closeChat() {
+  document.getElementById('chat-page').classList.remove('active');
+  document.getElementById('main-app').classList.add('active');
+  currentChatTarget = null;
+}
+
+// ===== 发送文本消息 =====
+async function sendChatMessage() {
+  const input = document.getElementById('text-input');
+  const content = input.value.trim();
+  if(!content) return;
+  const receiver = currentChatTarget === SELF_CHAT ? currentUser.uuid : currentChatTarget;
+  const msgData = {
+    sender_uuid: currentUser.uuid,
+    sender_name: currentUser.nickname,
+    receiver_uuid: receiver,
+    room: 'self',
+    content: content,
+    media_type: 'text'
+  };
+  const { error } = await sb.from('messages').insert([msgData]);
+  if(error) { showFloatTip('发送失败：' + error.message); return; }
+  input.value = '';
+  document.getElementById('btn-send').disabled = true;
+  loadMessages();
+}
+
+document.getElementById('btn-send').addEventListener('click', sendChatMessage);
+document.getElementById('text-input').addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();} });
+document.getElementById('text-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 102) + 'px';
+  document.getElementById('btn-send').disabled = this.value.trim().length === 0;
+});
+
+// ===== 附件上传 =====
+document.getElementById('btn-more').addEventListener('click', () => {
+  const p = document.getElementById('more-panel');
+  p.style.display = p.style.display === 'grid' ? 'none' : 'grid';
+});
+document.querySelectorAll('#more-panel .item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.getElementById('more-panel').style.display = 'none';
+    const type = item.dataset.type;
+    if(type==='image') document.getElementById('file-image').click();
+    if(type==='video') document.getElementById('file-video').click();
+    if(type==='audio') document.getElementById('file-audio').click();
+    if(type==='file') document.getElementById('file-any').click();
+  });
+});
+
+['file-image','file-video','file-audio','file-any'].forEach(id => {
+  document.getElementById(id).addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    let mediaType = 'file';
+    if(id==='file-image') mediaType = 'image';
+    if(id==='file-video') mediaType = 'video';
+    if(id==='file-audio') mediaType = 'audio';
+    const bucket = (mediaType==='image') ? 'chat-images' : 'chat-media';
+    try {
+      await ensureBucket(bucket);
+      const path = `${currentUser.uuid}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      const { error: upErr } = await sb.storage.from(bucket).upload(path, file);
+      if(upErr) throw upErr;
+      const { data: urlData } = sb.storage.from(bucket).getPublicUrl(path);
+      const finalUrl = encodeURI(urlData.publicUrl);
+      const isGroup = currentChatTarget && currentChatTarget.startsWith('group:');
+      const groupId = isGroup ? currentChatTarget.replace('group:', '') : null;
+      const receiver = isGroup ? 'group' : (currentChatTarget === SELF_CHAT ? currentUser.uuid : currentChatTarget);
+      const msgData = {
+        sender_uuid: currentUser.uuid,
+        sender_name: currentUser.nickname,
+        receiver_uuid: receiver,
+        room: isGroup ? 'group:' + groupId : 'self',
+        content: file.name,
+        media_type: mediaType,
+        file_url: finalUrl
+      };
+      const { error: insErr } = await sb.from('messages').insert([msgData]);
+      if(insErr) throw insErr;
+      if(isGroup) loadGroupMessages(groupId);
+      else loadMessages();
+    } catch(err) { showFloatTip('上传失败：' + err.message); }
+  });
+});
+
+// ===== 语音录制 =====
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingTimer = null;
+let recordingSeconds = 0;
+const MAX_RECORD_SECONDS = 60;
+
+document.getElementById('btn-mic').addEventListener('click', toggleRecording);
+
+async function toggleRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    stopRecording();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    recordingSeconds = 0;
+
+    mediaRecorder.ondataavailable = e => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(track => track.stop());
+      document.getElementById('recording-indicator').style.display = 'none';
+      clearInterval(recordingTimer);
+
+      if (audioChunks.length === 0) {
+        showFloatTip('录音为空');
+        return;
+      }
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      // 上传并发送
+      try {
+        await ensureBucket('chat-media');
+        const fileName = `voice_${Date.now()}.webm`;
+        const path = `${currentUser.uuid}/${fileName}`;
+        const { error: upErr } = await sb.storage.from('chat-media').upload(path, blob);
+        if (upErr) throw upErr;
+        const { data: urlData } = sb.storage.from('chat-media').getPublicUrl(path);
+        const finalUrl = encodeURI(urlData.publicUrl);
+        const isGroup = currentChatTarget && currentChatTarget.startsWith('group:');
+        const groupId = isGroup ? currentChatTarget.replace('group:', '') : null;
+        const receiver = isGroup ? 'group' : (currentChatTarget === SELF_CHAT ? currentUser.uuid : currentChatTarget);
+        const msgData = {
+          sender_uuid: currentUser.uuid,
+          sender_name: currentUser.nickname,
+          receiver_uuid: receiver,
+          room: isGroup ? 'group:' + groupId : 'self',
+          content: '语音消息',
+          media_type: 'audio',
+          file_url: finalUrl
+        };
+        const { error: insErr } = await sb.from('messages').insert([msgData]);
+        if (insErr) throw insErr;
+        if(isGroup) loadGroupMessages(groupId);
+        else loadMessages();
+      } catch(err) {
+        showFloatTip('语音发送失败：' + err.message);
+      }
+    };
+
+    mediaRecorder.start();
+    document.getElementById('recording-indicator').style.display = 'block';
+    // 计时
+    recordingTimer = setInterval(() => {
+      recordingSeconds++;
+      if (recordingSeconds >= MAX_RECORD_SECONDS) {
+        stopRecording();
+      }
+    }, 1000);
+  } catch(err) {
+    showFloatTip('无法启动录音：' + err.message);
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+}
+
+// ===== 加载消息 =====
+async function loadMessages() {
+  const box = document.getElementById('chat-messages');
+  if(!box) return;
+  const other = currentChatTarget === SELF_CHAT ? currentUser.uuid : currentChatTarget;
+  const { data, error } = await sb.from('messages')
+    .select('*')
+    .or(`and(sender_uuid.eq.${currentUser.uuid},receiver_uuid.eq.${other}),and(sender_uuid.eq.${other},receiver_uuid.eq.${currentUser.uuid})`)
+    .order('created_at', { ascending: true });
+  if(error) { showFloatTip(error.message); return; }
+  box.innerHTML = '';
+  (data||[]).forEach(m => {
+    const isSelf = m.sender_uuid === currentUser.uuid;
+    let wrapper = document.createElement('div');
+    wrapper.className = 'chat-msg' + (isSelf ? ' self' : '');
+
+    // 头像
+    const avatarImg = document.createElement('img');
+    avatarImg.className = 'avatar';
+    const avatarUrl = isSelf ? (currentUser.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser.nickname)}`) : '';
+    avatarImg.src = avatarUrl;
+    avatarImg.onerror = function() { this.src = avatarUrl; };
+    wrapper.appendChild(avatarImg);
+
+    // 内容
+    if (m.media_type === 'text') {
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = m.content || '';
+      wrapper.appendChild(bubble);
+    } else if (m.media_type === 'image') {
+      // 图片：无气泡，直接显示
+      const imageWrapper = document.createElement('div');
+      imageWrapper.className = 'image-wrapper';
+      const img = document.createElement('img');
+      img.src = m.file_url;
+      img.onclick = function() { showPreview(m.file_url); };
+      img.onerror = function() {
+        this.onerror = null;
+        this.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22150%22%3E%3Crect fill=%22%23eee%22 width=%22200%22 height=%22150%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23999%22 font-size=%2216%22%3E加载失败%3C/text%3E%3C/svg%3E';
+      };
+      imageWrapper.appendChild(img);
+      wrapper.appendChild(imageWrapper);
+    } else if (m.media_type === 'video') {
+      const imageWrapper = document.createElement('div');
+      imageWrapper.className = 'image-wrapper';
+      const video = document.createElement('video');
+      video.src = m.file_url;
+      video.controls = true;
+      video.preload = 'metadata';
+      video.style.cssText = 'width:100%; border-radius:10px; background:#000; max-height:280px;';
+      imageWrapper.appendChild(video);
+      wrapper.appendChild(imageWrapper);
+    } else if (m.media_type === 'audio') {
+      const imageWrapper = document.createElement('div');
+      imageWrapper.className = 'image-wrapper';
+      const audio = document.createElement('audio');
+      audio.src = m.file_url;
+      audio.controls = true;
+      audio.style.width = '180px';
+      imageWrapper.appendChild(audio);
+      wrapper.appendChild(imageWrapper);
+    } else if (m.media_type === 'file') {
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      const link = document.createElement('a');
+      link.href = m.file_url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = '📎 ' + (m.content || '文件');
+      bubble.appendChild(link);
+      wrapper.appendChild(bubble);
+    }
+    box.appendChild(wrapper);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function showPreview(url) {
+  const overlay = document.getElementById('preview-overlay');
+  document.getElementById('preview-img').src = url;
+  overlay.style.display = 'flex';
+}
+
+// ===== Realtime =====
+function subscribeMessages() {
+  if(subscribed) return;
+  sb.channel('public:messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+    const m = payload.new;
+    if(!m || !currentChatTarget) return;
+    const other = currentChatTarget === SELF_CHAT ? currentUser.uuid : currentChatTarget;
+    if((m.sender_uuid===currentUser.uuid && m.receiver_uuid===other) || (m.sender_uuid===other && m.receiver_uuid===currentUser.uuid)) {
+      loadMessages();
+    }
+  }).subscribe();
+  subscribed = true;
+}
+
+// ===== 软键盘避让 =====
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    const chatPage = document.getElementById('chat-page');
+    if (chatPage.classList.contains('active')) {
+      const diff = window.innerHeight - window.visualViewport.height;
+      if (diff > 150) {
+        // 键盘弹出
+        document.querySelector('.input-area').style.transform = `translateY(-${diff}px)`;
+        document.querySelector('.chat-header').style.transform = `translateY(${diff}px)`;
+      } else {
+        document.querySelector('.input-area').style.transform = '';
+        document.querySelector('.chat-header').style.transform = '';
+      }
+    }
+  });
+}
+
+// ===== 群聊功能 =====
+const GROUP_DB = 'chat_groups'; // localStorage key
+let selectedMembers = []; // 新建群聊时选中的成员
+
+// 从 localStorage 读取群聊列表
+function getGroups() {
+  try {
+    const raw = localStorage.getItem(GROUP_DB);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+// 保存群聊列表到 localStorage
+function saveGroups(groups) {
+  localStorage.setItem(GROUP_DB, JSON.stringify(groups));
+}
+
+// 渲染群聊列表页
+async function renderGroupList(container) {
+  container.innerHTML = '<div class="section-title">加载中...</div>';
+  const groups = getGroups();
+  if (groups.length === 0) {
+    container.innerHTML = `
+      <div class="section-title">群聊</div>
+      <div style="text-align:center; padding:40px 20px; color:#bbb;">
+        <div style="font-size:48px; margin-bottom:12px;">💬</div>
+        <div>暂无群聊</div>
+        <div style="font-size:13px; margin-top:6px;">点击右下角 + 创建群聊</div>
+      </div>
+    `;
+  } else {
+    let html = '<div class="section-title">我的群聊 (' + groups.length + ')</div>';
+    groups.forEach(g => {
+      const memberNames = g.members.map(m => m.nickname).join('、');
+      html += `<div class="list-item" onclick="openGroupChat('${g.id}')">
+        <div style="width:54px;height:54px;border-radius:50%;background:#d4f0e0;display:flex;align-items:center;justify-content:center;font-size:26px;">👥</div>
+        <div class="list-info">
+          <div class="list-name">${g.name}</div>
+          <div class="list-desc">${g.members.length} 人：${memberNames}</div>
+        </div>
+      </div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  // 悬浮 + 按钮
+  let fab = document.getElementById('group-fab');
+  if (!fab) {
+    fab = document.createElement('div');
+    fab.id = 'group-fab';
+    fab.innerHTML = '+';
+    fab.style.cssText = 'position:fixed;bottom:80px;right:20px;width:52px;height:52px;border-radius:50%;background:#07c160;color:#fff;font-size:32px;line-height:52px;text-align:center;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.25);z-index:200;';
+    document.body.appendChild(fab);
+  }
+  fab.style.display = 'block';
+  fab.onclick = () => openGroupCreate();
+}
+
+// 隐藏悬浮按钮
+function hideGroupFab() {
+  const fab = document.getElementById('group-fab');
+  if (fab) fab.style.display = 'none';
+}
+
+// 打开新建群聊页面（Tab index 4）
+async function openGroupCreate() {
+  hideGroupFab();
+  selectedMembers = [];
+  switchTab(4);
+}
+
+// 关闭新建群聊，回到群聊列表
+function closeGroupCreate() {
+  switchTab(3);
+}
+
+// 渲染新建群聊页面
+async function renderGroupCreate() {
+  const container = document.getElementById('main-content');
+  container.innerHTML = '<div class="section-title">加载中...</div>';
+
+  // 获取通讯录
+  let profiles = [];
+  try {
+    const { data } = await sb.from('profiles').select('*');
+    profiles = data || [];
+  } catch(e) {}
+
+  let html = `
+    <div class="section-title">群名称</div>
+    <div style="padding:12px 20px; background:#fff;">
+      <input type="text" id="group-name-input" placeholder="请输入群聊名称" maxlength="30" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:16px;outline:none;">
+    </div>
+    <div class="section-title">选择成员（${selectedMembers.length} 人）</div>
+  `;
+
+  profiles.forEach(p => {
+    if (p.uuid === currentUser.uuid) return;
+    const checked = selectedMembers.find(m => m.uuid === p.uuid) ? 'checked' : '';
+    html += `
+      <div class="list-item" onclick="toggleGroupMember('${p.uuid}','${p.nickname.replace(/'/g,"\\'")}','${p.avatar_url || ''}')" style="position:relative;">
+        <img class="avatar" src="${p.avatar_url || 'https://api.dicebear.com/7.x/initials/svg?seed='+encodeURIComponent(p.nickname)}">
+        <div class="list-info"><div class="list-name">${p.nickname}</div></div>
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid ${checked ? '#07c160' : '#ddd'};display:flex;align-items:center;justify-content:center;background:${checked ? '#07c160' : '#fff'};">
+          ${checked ? '<span style="color:#fff;font-size:14px;">✓</span>' : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  html += `
+    <div style="padding:20px;">
+      <button id="btn-create-group" style="width:100%;padding:12px;background:#07c160;color:#fff;border:none;border-radius:10px;font-size:17px;font-weight:600;cursor:pointer;">创建群聊</button>
+    </div>
+  `;
+  container.innerHTML = html;
+
+  document.getElementById('btn-create-group').addEventListener('click', createGroup);
+}
+
+// 切换成员选中状态
+function toggleGroupMember(uuid, nickname, avatarUrl) {
+  const idx = selectedMembers.findIndex(m => m.uuid === uuid);
+  if (idx >= 0) {
+    selectedMembers.splice(idx, 1);
+  } else {
+    selectedMembers.push({ uuid, nickname, avatar_url: avatarUrl });
+  }
+  renderGroupCreate(); // 重新渲染刷新勾选状态
+}
+
+// 创建群聊
+function createGroup() {
+  const nameInput = document.getElementById('group-name-input');
+  const name = nameInput.value.trim();
+  if (!name) { showFloatTip('请输入群聊名称'); return; }
+  if (selectedMembers.length === 0) { showFloatTip('请至少选择一名成员'); return; }
+
+  const groups = getGroups();
+  const newGroup = {
+    id: 'grp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    name: name,
+    owner_uuid: currentUser.uuid,
+    members: [
+      { uuid: currentUser.uuid, nickname: currentUser.nickname, avatar_url: currentUser.avatar_url || '' },
+      ...selectedMembers
+    ],
+    created_at: new Date().toISOString()
+  };
+  groups.push(newGroup);
+  saveGroups(groups);
+  showFloatTip('群聊创建成功！');
+  selectedMembers = [];
+  switchTab(3); // 回到群聊列表
+}
+
+// 打开群聊聊天页面
+function openGroupChat(groupId) {
+  const groups = getGroups();
+  const group = groups.find(g => g.id === groupId);
+  if (!group) { showFloatTip('群聊不存在'); return; }
+
+  currentChatTarget = 'group:' + groupId;
+  document.getElementById('main-app').classList.remove('active');
+  document.getElementById('chat-page').classList.add('active');
+  document.getElementById('chat-title').innerText = group.name;
+  document.getElementById('chat-messages').innerHTML = '';
+  loadGroupMessages(groupId);
+  subscribeGroupMessages(groupId);
+}
+
+// 加载群聊消息
+async function loadGroupMessages(groupId) {
+  const box = document.getElementById('chat-messages');
+  if (!box) return;
+  try {
+    const { data, error } = await sb.from('messages')
+      .select('*')
+      .eq('room', 'group:' + groupId)
+      .order('created_at', { ascending: true });
+    if (error) { showFloatTip(error.message); return; }
+    box.innerHTML = '';
+    (data || []).forEach(m => {
+      const isSelf = m.sender_uuid === currentUser.uuid;
+      let wrapper = document.createElement('div');
+      wrapper.className = 'chat-msg' + (isSelf ? ' self' : '');
+
+      const avatarImg = document.createElement('img');
+      avatarImg.className = 'avatar';
+      avatarImg.src = isSelf
+        ? (currentUser.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser.nickname)}`)
+        : (m.sender_avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(m.sender_name || '?')}`);
+      wrapper.appendChild(avatarImg);
+
+      // 群聊中显示发送者名字
+      if (!isSelf) {
+        const nameTag = document.createElement('div');
+        nameTag.style.cssText = 'font-size:12px;color:#999;margin:0 10px 2px;';
+        nameTag.textContent = m.sender_name || '未知';
+        const nameWrapper = document.createElement('div');
+        nameWrapper.style.cssText = 'display:flex;flex-direction:column;max-width:74%;';
+        nameWrapper.appendChild(nameTag);
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = m.content || '';
+        nameWrapper.appendChild(bubble);
+        wrapper.appendChild(nameWrapper);
+      } else {
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = m.content || '';
+        wrapper.appendChild(bubble);
+      }
+
+      box.appendChild(wrapper);
+    });
+    box.scrollTop = box.scrollHeight;
+  } catch(e) { showFloatTip('加载消息失败'); }
+}
+
+// 订阅群聊消息
+let groupSubscribed = false;
+function subscribeGroupMessages(groupId) {
+  if (groupSubscribed) return;
+  sb.channel('public:messages').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+    const m = payload.new;
+    if (!m || !currentChatTarget) return;
+    const expectedRoom = 'group:' + groupId;
+    if (m.room === expectedRoom) {
+      loadGroupMessages(groupId);
+    }
+  }).subscribe();
+  groupSubscribed = true;
+}
+
+// 群聊发送消息（重写 sendChatMessage 逻辑，通过 room 区分）
+const originalSend = sendChatMessage;
+async function sendGroupMessage(groupId, content) {
+  const groups = getGroups();
+  const group = groups.find(g => g.id === groupId);
+  if (!group) return;
+  const msgData = {
+    sender_uuid: currentUser.uuid,
+    sender_name: currentUser.nickname,
+    sender_avatar: currentUser.avatar_url || '',
+    receiver_uuid: 'group',
+    room: 'group:' + groupId,
+    content: content,
+    media_type: 'text'
+  };
+  const { error } = await sb.from('messages').insert([msgData]);
+  if (error) { showFloatTip('发送失败：' + error.message); return; }
+  loadGroupMessages(groupId);
+}
+
+// ===== 工具 =====
+function showFloatTip(text) {
+  const el = document.getElementById('float-tip');
+  el.textContent = text;
+  el.style.opacity = '1';
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.style.opacity = '0', 2700);
+}
+function showError(text) {
+  const el = document.getElementById('err-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+}
+</script>
+</body>
+</html>
